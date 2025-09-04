@@ -10,6 +10,14 @@ A cross-platform desktop lobby application for classic multiplayer games (inspir
 - Supports Heroes of Might and Magic II & III (more can be added)
 - Electron + React + TypeScript
 
+<<<<<<< HEAD
+=======
+## Download
+
+See the [Releases](https://github.com/Houtmen/Game-app/releases) page for the latest Windows installer:
+- [Download Lobby App Setup.exe](https://github.com/Houtmen/Game-app/releases/latest)
+
+>>>>>>> 4f73588524a1adec1e37b563f70c2ee3854d1200
 ## Getting Started
 
 ### Prerequisites
@@ -29,7 +37,10 @@ A cross-platform desktop lobby application for classic multiplayer games (inspir
 	yarn
 	```
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4f73588524a1adec1e37b563f70c2ee3854d1200
 ### Running the App
 To start the Electron app in development mode:
 ```sh
@@ -37,6 +48,7 @@ npm run dev
 # or
 yarn dev
 ```
+<<<<<<< HEAD
 
 To build for production:
 ```sh
@@ -109,3 +121,5 @@ See the [Releases](https://github.com/Houtmen/Game-app/releases) page for the la
 
 ## License
 MIT
+=======
+>>>>>>> 4f73588524a1adec1e37b563f70c2ee3854d1200
