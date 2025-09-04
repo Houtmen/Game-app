@@ -1,0 +1,63 @@
+{
+  "name": "lobby-app",
+  "version": "1.0.0",
+  "description": "A cross-platform Electron-based lobby app for LAN and internet multiplayer, supporting Heroes of Might and Magic II & III. Features include:\r - Game selection (expandable)\r - Lobby creation/joining (LAN & internet)\r - Real-time chat\r - Game launching for supported titles",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "webpack --mode development && electron .",
+    "start": "electron .",
+    "build": "webpack --mode production",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.lobby.app",
+    "productName": "Lobby App",
+    "files": [
+      "dist/**/*",
+      "src/**/*",
+      "server/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "dgram": "^1.0.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3"
+  }
+}
