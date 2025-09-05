@@ -30,5 +30,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: dist/win-unpacked/Lobby App.exe
-          env:
-            GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
