@@ -25,6 +25,8 @@ jobs:
 
       - name: Package app (installer)
         run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Upload installer to release
         uses: softprops/action-gh-release@v1
