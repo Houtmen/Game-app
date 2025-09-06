@@ -6,8 +6,13 @@ const GAME_PATHS: Record<string, string> = {
 };
 
 ipcMain.handle('start-game', async (_event, gameId: string, exePath?: string) => {
+  // Validate gameId and exePath
+  if (typeof gameId !== 'string' || (exePath && typeof exePath !== 'string')) {
+    console.error('Invalid arguments for start-game:', { gameId, exePath });
+    return;
+  }
   const exe = exePath || GAME_PATHS[gameId];
-  if (exe) {
+  if (exe && typeof exe === 'string') {
     execFile(exe, (err) => {
       if (err) console.error('Failed to launch game:', err);
     });
@@ -45,11 +50,21 @@ ipcMain.handle('lan-discover', async () => {
 });
 
 ipcMain.handle('lan-announce', async (_event, lobby) => {
+  // Validate lobby object
+  if (!lobby || typeof lobby !== 'object' || typeof lobby.id !== 'string') {
+    console.error('Invalid lobby for lan-announce:', lobby);
+    return;
+  }
   const message = Buffer.from(JSON.stringify({ type: 'announce', lobby }));
   udp.send(message, 0, message.length, LOBBY_PORT, BROADCAST_ADDR);
 });
 
 ipcMain.handle('lan-remove', async (_event, lobbyId) => {
+  // Validate lobbyId
+  if (typeof lobbyId !== 'string') {
+    console.error('Invalid lobbyId for lan-remove:', lobbyId);
+    return;
+  }
   const message = Buffer.from(JSON.stringify({ type: 'remove', lobbyId }));
   udp.send(message, 0, message.length, LOBBY_PORT, BROADCAST_ADDR);
 });

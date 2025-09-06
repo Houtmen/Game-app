@@ -1,4 +1,13 @@
+declare global {
+  interface Window {
+    electronAPI?: {
+      onUpdateAvailable?: (callback: () => void) => void;
+      onUpdateDownloaded?: (callback: () => void) => void;
+    };
+  }
+}
 import React, { useState, useEffect } from 'react';
+import logger from './logger';
 import { discoverLobbies, announceLobby, removeLobby, startGame, broadcastLAN, listenLAN } from './lan';
 import GamePathSettings from './GamePathSettings';
 import Chat from './Chat';
@@ -29,6 +38,28 @@ const GAMES = [
 ];
 
 function App() {
+  useEffect(() => {
+    logger.info('App mounted');
+    return () => {
+      logger.info('App unmounted');
+    };
+  }, []);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'connecting'>('connecting');
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return localStorage.getItem('onboarded') !== 'true';
+  });
+  const [showHelp, setShowHelp] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
+
+  useEffect(() => {
+    if (window.electronAPI?.onUpdateAvailable) {
+      window.electronAPI.onUpdateAvailable(() => setUpdateAvailable(true));
+    }
+    if (window.electronAPI?.onUpdateDownloaded) {
+      window.electronAPI.onUpdateDownloaded(() => setUpdateDownloaded(true));
+    }
+  }, []);
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [inLobby, setInLobby] = useState<Lobby | null>(null);
   const [messages, setMessages] = useState<{ nickname: string; text: string }[]>([]);
@@ -39,7 +70,8 @@ function App() {
   const [gamePaths, setGamePaths] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem('gamePaths') || '{}');
-    } catch {
+    } catch (err) {
+      logger.error('Failed to parse gamePaths from localStorage:', err);
       return {};
     }
   });
@@ -63,20 +95,44 @@ function App() {
 
   useEffect(() => {
     if (mode === 'internet') {
-      const socket = new window.WebSocket('ws://localhost:3001');
-      socket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'lobbies') setLobbies(msg.lobbies);
-        if (msg.type === 'lobbyCreated' || msg.type === 'joinedLobby') {
-          setInLobby(msg.lobby);
-          setMessages(msg.lobby.messages || []);
-        }
-        if (msg.type === 'userJoined') setMessages(m => [...m, { nickname: 'System', text: `${msg.nickname} joined.` }]);
-        if (msg.type === 'userLeft') setMessages(m => [...m, { nickname: 'System', text: `${msg.nickname} left.` }]);
-        if (msg.type === 'message') setMessages(m => [...m, msg.message]);
+      let reconnectAttempts = 0;
+      let socket: WebSocket | null = null;
+      let reconnectTimeout: any = null;
+      const connect = () => {
+        setNetworkStatus('connecting');
+        socket = new window.WebSocket('ws://localhost:3001');
+        socket.onopen = () => {
+          setNetworkStatus('online');
+          reconnectAttempts = 0;
+        };
+        socket.onclose = () => {
+          setNetworkStatus('offline');
+          reconnectAttempts++;
+          if (reconnectAttempts <= 5) {
+            reconnectTimeout = setTimeout(connect, 2000 * reconnectAttempts);
+          }
+        };
+        socket.onerror = () => {
+          setNetworkStatus('offline');
+        };
+        socket.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'lobbies') setLobbies(msg.lobbies);
+          if (msg.type === 'lobbyCreated' || msg.type === 'joinedLobby') {
+            setInLobby(msg.lobby);
+            setMessages(msg.lobby.messages || []);
+          }
+          if (msg.type === 'userJoined') setMessages(m => [...m, { nickname: 'System', text: `${msg.nickname} joined.` }]);
+          if (msg.type === 'userLeft') setMessages(m => [...m, { nickname: 'System', text: `${msg.nickname} left.` }]);
+          if (msg.type === 'message') setMessages(m => [...m, msg.message]);
+        };
+        setWs(socket);
       };
-      setWs(socket);
-      return () => { socket.close(); };
+      connect();
+      return () => {
+        if (socket) socket.close();
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      };
     } else {
       let running = true;
       async function pollLAN() {
@@ -113,10 +169,12 @@ function App() {
     }
   }
   function handleCreateLobby() {
-    setError(null);
+  setError(null);
+  logger.info('Attempting to create lobby', { game, lobbyName });
     const gamePath = gamePaths[game];
     if (!gamePath) {
-      setError('Please set the game path in Settings before creating a lobby.');
+  setError('Please set the game path in Settings before creating a lobby.');
+  logger.warn('Missing game path for', game);
       return;
     }
     const lobbySettings = {
@@ -240,6 +298,60 @@ function App() {
 
   return (
     <div style={{ padding: 32 }}>
+      {/* Network Status Indicator */}
+      <div aria-live="polite" style={{ position: 'absolute', top: 16, left: 16, fontWeight: 'bold', color: networkStatus === 'online' ? '#28a745' : networkStatus === 'offline' ? '#a00' : '#007bff' }}>
+        {networkStatus === 'online' && 'Online'}
+        {networkStatus === 'offline' && 'Offline - reconnecting...'}
+        {networkStatus === 'connecting' && 'Connecting...'}
+      </div>
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <div role="dialog" aria-modal="true" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 10, padding: 32, maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,0.2)' }}>
+            <h2>Welcome to Game Lobby App!</h2>
+            <p>This app lets you host and join classic games over LAN or the internet.<br />
+            <b>Quick Start:</b></p>
+            <ul>
+              <li>Set your game paths in <b>Settings</b></li>
+              <li>Create or join a lobby</li>
+              <li>Chat and launch games with friends</li>
+            </ul>
+            <button style={{ marginTop: 16 }} onClick={() => { localStorage.setItem('onboarded', 'true'); setShowOnboarding(false); }}>Got it!</button>
+          </div>
+        </div>
+      )}
+      {/* Help Modal */}
+      {showHelp && (
+        <div role="dialog" aria-modal="true" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 10, padding: 32, maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,0.2)' }}>
+            <h2>Help & Info</h2>
+            <ul>
+              <li><b>Settings:</b> Set game paths for supported games.</li>
+              <li><b>Internet/LAN:</b> Switch modes for online or local play.</li>
+              <li><b>Lobbies:</b> Create or join, then chat and launch games.</li>
+              <li><b>Problems?</b> Check your network and game paths.</li>
+            </ul>
+            <button style={{ marginTop: 16 }} onClick={() => setShowHelp(false)}>Close</button>
+          </div>
+        </div>
+      )}
+      {updateAvailable && !updateDownloaded && (
+        <div style={{ background: '#e7f7ff', color: '#007bff', border: '1px solid #007bff', padding: '8px 16px', borderRadius: 6, marginBottom: 16 }}>
+          <b>Update available!</b> Downloading latest version...
+        </div>
+      )}
+      {updateDownloaded && (
+        <div style={{ background: '#e7ffe7', color: '#28a745', border: '1px solid #28a745', padding: '8px 16px', borderRadius: 6, marginBottom: 16 }}>
+          <b>Update ready!</b> Please restart the app to apply the latest version.<br />
+          <button style={{ marginTop: 8 }} onClick={() => window.location.reload()}>Restart Now</button>
+        </div>
+      )}
+      {error && (
+        <div style={{ background: '#fff0f0', color: '#a00', border: '1px solid #f00', padding: '8px 16px', borderRadius: 6, marginBottom: 16, position: 'relative' }}>
+          <span>{error}</span>
+          <button style={{ position: 'absolute', right: 8, top: 8, background: 'transparent', border: 'none', color: '#a00', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setError(null)}>×</button>
+        </div>
+      )}
       <GamePathSettings
         open={showSettings}
         onClose={() => setShowSettings(false)}
@@ -251,7 +363,8 @@ function App() {
         initialPaths={gamePaths}
       />
       <h1>Game Lobby App</h1>
-      <button style={{ position: 'absolute', top: 16, right: 16 }} onClick={() => setShowSettings(true)}>Settings</button>
+  <button style={{ position: 'absolute', top: 16, right: 16 }} onClick={() => setShowSettings(true)}>Settings</button>
+  <button aria-label="Help" title="Help" style={{ position: 'absolute', top: 16, right: 120, background: '#e7f7ff', color: '#007bff', border: '1px solid #007bff', borderRadius: 8, padding: '4px 12px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => setShowHelp(true)}>?</button>
       <div style={{ marginBottom: 16 }}>
         <span style={{
           display: 'inline-block',

@@ -1,6 +1,10 @@
 directories:
   output: dist
   buildResources: build
+publish:
+  - provider: github
+    owner: Houtmen
+    repo: Game-app
 appId: com.lobby.app
 productName: Lobby App
 files:

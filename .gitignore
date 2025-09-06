@@ -1,0 +1,6 @@
+# Ignore build output
+/dist/
+/node_modules/
+dist/win-unpacked/resources/app.asar
+dist/win-unpacked/Lobby App.exe
+node_modules/electron/dist/electron.exe

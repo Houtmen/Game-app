@@ -1,0 +1,58 @@
+name: Cross-Platform Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Build and package
+        run: npm run dist
+      - name: Upload installer
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.exe
+          token: ${{ secrets.GH_TOKEN }}
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Build and package
+        run: npm run dist
+      - name: Upload DMG
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.dmg
+          token: ${{ secrets.GH_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Build and package
+        run: npm run dist
+      - name: Upload AppImage
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.AppImage
+          token: ${{ secrets.GH_TOKEN }}

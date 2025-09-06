@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from './logger';
 
 interface ChatProps {
   messages: { nickname: string; text: string }[];
@@ -6,12 +7,21 @@ interface ChatProps {
 }
 
 const Chat: React.FC<ChatProps> = ({ messages, onSend }) => {
+  React.useEffect(() => {
+    logger.info('Chat component mounted');
+    return () => {
+      logger.info('Chat component unmounted');
+    };
+  }, []);
   const [input, setInput] = useState('');
 
   const handleSend = () => {
     if (input.trim()) {
+      logger.info('Message sent', { message: input });
       onSend(input);
       setInput('');
+    } else {
+      logger.warn('Attempted to send empty message');
     }
   };
 
