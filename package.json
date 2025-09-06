@@ -4,7 +4,7 @@
   "description": "A cross-platform Electron-based lobby app for LAN and internet multiplayer, supporting Heroes of Might and Magic II & III. Features include:\r - Game selection (expandable)\r - Lobby creation/joining (LAN & internet)\r - Real-time chat\r - Game launching for supported titles",
   "main": "dist/main.cjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+  "test": "echo \"No tests specified\" && exit 0",
     "dev": "webpack --mode development && electron .",
     "start": "electron .",
   "build": "webpack --mode production --config webpack.config.js",
